@@ -10,8 +10,6 @@ import pandas as pd
 import numpy as np
 import glob, os
 
-
-
 # Bokeh libraries
 from bokeh.io import output_file, output_notebook
 from bokeh.plotting import figure, show
