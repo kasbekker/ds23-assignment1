@@ -281,6 +281,229 @@ def ratings_per_country():
   #Display figure inline in Jupyter Notebook.
   #Display figure.
   return(p)
-    
+
+def ratings():
+  #data handling
+  import pandas as pd
+  import numpy as np
+  import glob, os
+
+  # Bokeh libraries
+  from bokeh.io import output_file, output_notebook
+  from bokeh.plotting import figure, show
+  from bokeh.models import ColumnDataSource
+  from bokeh.layouts import row, column, gridplot
+  from bokeh.io import output_file
+  from bokeh.plotting import figure, show
+  from bokeh.models import HoverTool
+  from bokeh.models import DatetimeTickFormatter
+  from bokeh.models import DataRange1d
+
+  # %%
+  # Get CSV files list from a folder
+  path = 'data/ratings_country_data'
+  csv_files = glob.glob(path + "/*.csv")
+
+  # Read each CSV file into DataFrame
+  # This creates a list of dataframes
+  df_list = (pd.read_csv(file, encoding = 'utf-16') for file in csv_files)
+
+  #encoding moest hier gedefinieerd worden met 'utf-16' anders kreeg ik een error, https://stackoverflow.com/questions/50342517/unicodedecodeerror-reading-a-csv-file
+
+  # Concatenate all DataFrames
+  df = pd.concat(df_list, ignore_index=True)
+
+  #Bovenstaande code selecteert een map in path, en zet alle csv bestanden in een dataframe genaamd df, https://sparkbyexamples.com/pandas/pandas-read-multiple-csv-files/
+
+  print(df)
+
+  # %%
+  #Selecteert de rijen die van belang zijn (zie opdracht document)
+  df = df[["Date", "Package Name", "Country", "Daily Average Rating", "Total Average Rating"]]
+
+  print(df)
+
+  # %%
+  #Laat het percentage NaN values zien.
+  df.isna().sum()/len(df)*100
+
+  # %%
+  #Dropt alle rijen waar NaN in voorkomt, https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.dropna.html
+  df = df.dropna()
+
+  print(df)
+
+  # %%
+  #Laat zien dat er nu geen 1 rij NaN type heeft. 
+  df.isna().sum()/len(df)*100
+
+  # %%
+  #Vertaalt de data in de kolom 'date' naar leesbaar data voor de pandas dataframe  
+  df['Date'] = pd.to_datetime(df['Date'])
+
+  df_ratings = df
+
+  print(df_ratings)
+
+  # %%
+  #selecteerd de kolommen 'date' en 'Daily Average Rating'
+  df_date_rating = df_ratings[["Date", "Daily Average Rating"]]
+
+  #Maakt cds bestanden en zorgt ervoor dat 'Date' een kolom blijft in de dataframe
+  df_date_rating_cds = ColumnDataSource(df_date_rating.groupby('Date')['Daily Average Rating'].sum().to_frame().reset_index())
+
+  print(df_date_rating)
+
+  # %%
+  #Geeft de gemiddelde average rating per maand
+  df_date_avg_rating_monthly = df_date_rating.groupby(pd.Grouper(key='Date', freq='M')).mean().reset_index()  
+
+  print(df_date_avg_rating_monthly)
+
+  # %%
+  #Zet het figuur op
+  fig = figure(title = 'Average rating per month', 
+              x_axis_type='datetime', 
+              height=400, 
+              width=800, 
+              x_axis_label='Date', 
+              y_axis_label='Rating')
+
+  source = ColumnDataSource(df_date_avg_rating_monthly)
+
+  # Add the hover tool to the figure
+  hover = HoverTool(tooltips=[('Rating', '@{Daily Average Rating}')])
+
+  fig.vbar(x='Date', 
+          top='Daily Average Rating', 
+          source=source, width=86400000*28)
+
+  # Add the hover tool to the figure
+  fig.add_tools(hover)
+  return(fig)
+
+
+
+def crashes():
+  # %%
+  #data handling
+  import pandas as pd
+  import numpy as np
+  import glob, os
+
+  # Bokeh libraries
+  from bokeh.io import output_file, output_notebook
+  from bokeh.plotting import figure, show
+  from bokeh.models import ColumnDataSource
+  from bokeh.io import output_file
+  from bokeh.plotting import figure, show
+  from bokeh.models import HoverTool
+  from bokeh.models import DatetimeTickFormatter
+
+  # %%
+  # Get CSV files list from a folder
+  path = 'data/crashes_data'
+  csv_files = glob.glob(path + "/*.csv")
+
+  # Read each CSV file into DataFrame
+  # This creates a list of dataframes
+  df_list = (pd.read_csv(file, encoding = 'utf-16') for file in csv_files)
+
+
+  #encoding moest hier gedefinieerd worden anders kreeg ik een error, https://stackoverflow.com/questions/50342517/unicodedecodeerror-reading-a-csv-file
+
+  # Concatenate all DataFrames
+  df   = pd.concat(df_list, ignore_index=True)
+
+
+  # %%
+  #selecteert de rijen die van belang zijn (zie opdracht document)
+  df = df[["Date","Package Name","Daily Crashes","Daily ANRs"]]
+
+
+  # %%
+  #laat het percentage NaN values zijn.
+  df.isna().sum()/len(df)*100
+
+  # %%
+  #Vertaalt de data in de kolom 'date' naar leesbaar data voor de pandas dataframe 
+  df['Date'] = pd.to_datetime(df['Date'])
+  
+  df_crashes_ANRs = df
+
+
+  # %%
+  #selecteerd de kolommen 'date' en 'Daily Crashes'
+  df_date_crashes = df_crashes_ANRs[["Date", "Daily Crashes"]]
+
+  #Maakt cds bestanden en zorgt ervoor dat 'Date' een kolom blijft in de dataframe
+  df_date_crashes_cds = ColumnDataSource(df_crashes_ANRs.groupby('Date')['Daily Crashes'].sum().to_frame().reset_index())
+
+  # %%
+  #Geeft de gemiddelde average crashes per maand
+  df_date_avg_crashes_monthly = df_date_crashes.groupby(pd.Grouper(key='Date', freq='M')).mean().reset_index()
+
+
+  # %%
+  #Figuur opzetten
+  fig = figure(title = 'Average crashes per month', 
+              x_axis_type='datetime', 
+              height=400, 
+              width=800, 
+              x_axis_label='Date', 
+              y_axis_label='Crashes')
+
+
+  source = ColumnDataSource(df_date_avg_crashes_monthly)
+
+  #Add the hover tool to the figure
+  hover = HoverTool(tooltips=[('Crashes', '@{Daily Crashes}')])
+
+  fig.vbar(x='Date', top='Daily Crashes', source=source, width=86400000*28)
+
+  # Add the hover tool to the figure
+  fig.add_tools(hover)
+  #x-as klopt nog niet, hij begint 1 maand later dan in de dataframe!
+
+
+  # %%
+  #selecteerd de kolommen 'date' en 'Daily ANRs'
+  df_date_ANRs = df_crashes_ANRs[["Date", "Daily ANRs"]]
+
+  #Maakt cds bestanden
+  df_date_ANRs_cds = ColumnDataSource(df_crashes_ANRs.groupby('Date')['Daily ANRs'].sum().to_frame().reset_index())
+
+
+
+  # %%
+  #Geeft de gemiddelde average ANRs per maand
+  df_date_avg_ANRs_monthly = df_date_ANRs.groupby(pd.Grouper(key='Date', freq='M')).mean().reset_index()
+
+
+  # %%
+  #Zet het figuur op
+  fig2 = figure(title = 'Average ANRs per month', 
+              x_axis_type='datetime', 
+              height=400, 
+              width=800, 
+              x_axis_label='Date', 
+              y_axis_label='ANRs')
+
+
+  source = ColumnDataSource(df_date_avg_ANRs_monthly)
+
+  # Add the hover tool to the figure
+  hover = HoverTool(tooltips=[('ANRs', '@{Daily ANRs}')])
+
+  fig2.vbar(x='Date', top='Daily ANRs', source=source, width=86400000*28)
+
+  # Add the hover tool to the figure
+  fig2.add_tools(hover)
+  return(fig,fig2)
+
+
+
+
+crashes = crashes()
 output_file('final.html')  # Render to static HTML, or 
-show(column(sales_volume_per_country(),ratings_per_country()))
+show(column(sales_volume_per_country(),ratings_per_country(),ratings(),crashes[0],crashes[1]))
