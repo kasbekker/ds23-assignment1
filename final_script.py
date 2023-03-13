@@ -146,7 +146,7 @@ def sales_volume_per_country():
     border_line_color=None,location = (0,0), orientation = 'horizontal', major_label_overrides = tick_labels)
 
     #Create figure object.
-    p = figure(title = 'Sales Volume per country in the second half of 2021', plot_height = 600 , plot_width = 950, toolbar_location = None, tools=[hover])
+    p = figure(title = 'Sales Volume per country in the second half of 2021', plot_height = 600 , plot_width = 950, tools=['xpan', 'reset', 'save', 'wheel_zoom', hover])
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
 
@@ -268,7 +268,7 @@ def ratings_per_country():
   border_line_color=None,location = (0,0), orientation = 'horizontal', major_label_overrides = tick_labels)
 
   #Create figure object.
-  p = figure(title = 'Average rating per country for the second half of 2021', plot_height = 600 , plot_width = 950, toolbar_location = None,  tools = [hover])
+  p = figure(title = 'Average rating per country for the second half of 2021', plot_height = 600 , plot_width = 950,  tools = ['xpan', 'reset', 'save', 'wheel_zoom', hover])
   p.xgrid.grid_line_color = None
   p.ygrid.grid_line_color = None
 
@@ -501,9 +501,204 @@ def crashes():
   fig2.add_tools(hover)
   return(fig,fig2)
 
+def sales_volume():
+  # %%
+  """Bokeh Visualization Template
+
+  This template is a general outline for turning your data into a 
+  visualization using Bokeh.
+  """
+  # Data handling
+  import pandas as pd
+  import numpy as np
+  import pandas as pd
+  import numpy as np
+  import glob, os
+  from datetime import date
+  import datetime
+
+
+  # Bokeh libraries
+  from bokeh.io import output_file, output_notebook
+  from bokeh.plotting import figure, show
+  from bokeh.layouts import row, column, gridplot
+  from bokeh.models.widgets import Tabs, Panel
+  from bokeh.io import output_file
+  # Bokeh Libraries
+  from bokeh.models import ColumnDataSource, CategoricalColorMapper, Div, RangeTool, Range1d, CustomJS, DateRangeSlider
+  from bokeh.sampledata.stocks import AAPL
+  from bokeh.plotting import figure
+  from bokeh.resources import CDN
+  from bokeh.embed import file_html
+
+  def to_integer(dt_time):
+      return 10000*dt_time.year + 100*dt_time.month + dt_time.day
+
+
+  # %%
+  import pandas as pd
+  import numpy as np
+  import glob, os
+
+  # Get CSV files list from a folder
+  path = 'data/sales_data'
+  csv_files = glob.glob(path + "/*.csv")
+
+  # Read each CSV file into DataFrame
+  # This creates a list of dataframes
+  df_list = (pd.read_csv(file) for file in csv_files)
+
+  # Concatenate all DataFrames
+  df   = pd.concat(df_list, ignore_index=True)
+
+
+
+  #Bovenstaande code selecteert een map in path, en zet alle csv bestanden in een dataframe genaamd df, https://sparkbyexamples.com/pandas/pandas-read-multiple-csv-files/
+
+  # %%
+  df = df[["Transaction Date", "Transaction Type", "Product id", "Sku Id", "Buyer Country", "Buyer Postal Code", "Amount (Merchant Currency)"]]
+  #selecteert de rijen die van belang zijn (zie opdracht document)
+
+
+  df = df.loc[(df['Transaction Type'] == 'Charge') & (df['Product id'] == 'com.vansteinengroentjes.apps.ddfive')]
+  #selecteert specfieke rijen met de waarden die overeenkomen hier boven (zie opdracht document)
+
+
+
+  # %%
+  df.isna().sum()/len(df)*100
+
+  #laat het percentage NaN values zijn.
+
+
+  # %%
+  df = df.dropna()
+
+  #dropt alle rijen waar NaN in voorkomt, https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.dropna.html
+
+
+
+  # %%
+  df.isna().sum()/len(df)*100
+
+  #laat zien dat er nu geen 1 rij NaN type heeft. 
+
+
+  # %%
+  df['Transaction Date'] = pd.to_datetime(df['Transaction Date'])
+  df_sales =df
+  #vertaalt de transaction date naar leesbaar data voor pandas dataframe.
+
+
+  # %%
+
+
+  # %%
+  # Determine where the visualization will be rendered
+  # output_file('filename.html')  # Render to static HTML, or 
+  output_notebook()  # Render inline in a Jupyter Notebook
+
+  #selecteert de rijen transaction date en amount
+  date_amount_data = df_sales[["Transaction Date", "Amount (Merchant Currency)"]]
+  date_amount_data.columns = ['Date', 'Amount'] 
+  # amount_data = df_sales["Amount (Merchant Currency)"]
+
+  dates = np.array(AAPL['date'], dtype=np.datetime64)
+  #maakt cds bestanden voor sales per dag
+  # date_data_cds = ColumnDataSource(date_amount_data.groupby('Transaction Date')['Amount (Merchant Currency)'].sum().to_frame().reset_index(), data=dict(date=dates, close=AAPL['adj_close']))
+  date_data_cds = ColumnDataSource(date_amount_data.groupby('Date')['Amount'].sum().to_frame().reset_index())
+  date_data_cds_count = ColumnDataSource(date_amount_data.groupby(['Date'])['Amount'].count().to_frame().reset_index())
+  # amount_data_cds = ColumnDataSource(amount_data)
+
+
+
+
+  # %%
+  # Set up the figure(s)
+  # Create and configure the figure
+  from bokeh.models import HoverTool
+  #add hovertool
+  hover = HoverTool(tooltips = [ ('Date','@Date'),('Total Sum of Sales', '@Amount')])
+
+
+  fig = figure(x_axis_type='datetime',
+              plot_height=800, plot_width=1500, tools=['xpan', 'reset', 'save', 'wheel_zoom', hover],
+              title='Sales volume (EUR) per day in the second half of 2021',
+              x_axis_label='Date', y_axis_label='Amount')
+  # Connect to and draw the data
+  # Render the race as step lines
+
+
+  #maak vbar fig
+  fig.vbar(x='Date', top='Amount', source=date_data_cds, width=8640000*4)
+
+  fig2 = figure(x_axis_type='datetime',
+              plot_height=800, plot_width=1500, tools=['xpan', 'reset', 'save', 'wheel_zoom', hover],
+              title='Amount of buyers per day in the second half of 2021',
+              x_axis_label='Date', y_axis_label='Amount')
+  fig2.vbar(x='Date', top='Amount', source=date_data_cds_count, width=8640000*4)
+
+  # %%
+  # xdate1 = datetime.date(2018, 6, 1)
+  # xdate2 = datetime.date(2018, 6, 3)
+  # print(xdate1,xdate2)
+
+  # p = figure(height=300, width=800, tools="xpan", toolbar_location=None,
+  #            x_axis_type="datetime", x_axis_location="above",
+  #            background_fill_color="#efefef", x_range=(0,5))
+
+  # p.line(x='Transaction Date', y='Amount (Merchant Currency)', source=date_data_cds)
+
+
+  # select = figure(title="Drag the middle and edges of the selection box to change the range above",
+  #                 height=130, width=800, y_range=p.y_range,
+  #                 x_axis_type="datetime", y_axis_type=None,
+  #                 tools="", toolbar_location=None, background_fill_color="#efefef")
+
+  # range_tool = RangeTool(x_range=p.x_range)
+  # range_tool.overlay.fill_color = "navy"
+  # range_tool.overlay.fill_alpha = 0.2
+
+  # select.line(x= 'Transaction Date', y= 'Amount (Merchant Currency)', source=date_data_cds)
+  # select.ygrid.grid_line_color = None
+  # select.add_tools(range_tool)
+  # select.toolbar.active_multi = range_tool
+
+  # show(column(p, select))
+  # output_file('test.html')
+
+
+
+  # %%
+
+
+  # #range slider
+  # select = figure(title="Drag the middle and edges of the selection box to change the range above",
+  #                 height=130, width=800, y_range=fig.y_range,
+  #                 x_axis_type="datetime", y_axis_type=None,
+  #                 tools="", toolbar_location=None, background_fill_color="#efefef")
+
+  # range_tool = RangeTool(x_range=Range1d(0,5))
+  # range_tool.overlay.fill_color = "navy"
+  # range_tool.overlay.fill_alpha = 0.2
+
+  # select.vbar(x='Transaction Date', top='Amount (Merchant Currency)', source=date_data_cds, width=20)
+  # select.ygrid.grid_line_color = None
+  # select.add_tools(range_tool)
+  # select.toolbar.active_multi = range_tool
+
+  # # Organize the layout
+
+  # # Preview and save 
+  # show(column(fig,select))  # See what I made, and save if I like it
+  # output_file('test.html')
+  return(fig,fig2)
+
+
+sales = sales_volume()
 
 
 
 crashes = crashes()
 output_file('final.html')  # Render to static HTML, or 
-show(column(sales_volume_per_country(),ratings_per_country(),ratings(),crashes[0],crashes[1]))
+show(column(sales[0],sales[1],sales_volume_per_country(),ratings_per_country(),ratings(),crashes[0],crashes[1]))
