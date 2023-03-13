@@ -694,6 +694,128 @@ def sales_volume():
   # output_file('test.html')
   return(fig,fig2)
 
+def sku_id():
+  # %%
+  """Bokeh Visualization Template
+
+  This template is a general outline for turning your data into a 
+  visualization using Bokeh.
+  """
+  # Data handling
+  import pandas as pd
+  import numpy as np
+  import pandas as pd
+  import numpy as np
+  import glob, os
+  from datetime import date
+  import datetime
+
+
+  # Bokeh libraries
+  from bokeh.io import output_file, output_notebook
+  from bokeh.plotting import figure, show
+  from bokeh.layouts import row, column, gridplot
+  from bokeh.models.widgets import Tabs, Panel
+  from bokeh.io import output_file
+  # Bokeh Libraries
+  from bokeh.models import ColumnDataSource, CategoricalColorMapper, Div, RangeTool, Range1d, CustomJS, DateRangeSlider
+  from bokeh.sampledata.stocks import AAPL
+  from bokeh.plotting import figure
+  from bokeh.resources import CDN
+  from bokeh.embed import file_html
+
+
+  # %%
+  import pandas as pd
+  import numpy as np
+  import glob, os
+
+  # Get CSV files list from a folder
+  path = 'data/sales_data'
+  csv_files = glob.glob(path + "/*.csv")
+
+  # Read each CSV file into DataFrame
+  # This creates a list of dataframes
+  df_list = (pd.read_csv(file) for file in csv_files)
+
+  # Concatenate all DataFrames
+  df   = pd.concat(df_list, ignore_index=True)
+  df.head()
+
+
+  #Bovenstaande code selecteert een map in path, en zet alle csv bestanden in een dataframe genaamd df, https://sparkbyexamples.com/pandas/pandas-read-multiple-csv-files/
+
+  # %%
+  df = df[["Product id", "Sku Id", "Product Title", "Amount (Merchant Currency)", "Transaction Type"]]
+  #selecteert de rijen die van belang zijn (zie opdracht document)
+
+
+  df = df.loc[(df['Transaction Type'] == 'Charge')]
+  #selecteert specfieke rijen met de waarden die overeenkomen hier boven (zie opdracht document)
+
+
+
+  # %%
+  df.isna().sum()/len(df)*100
+
+  #laat het percentage NaN values zijn.
+
+
+  # %%
+  df = df.dropna()
+
+  #dropt alle rijen waar NaN in voorkomt, https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.dropna.html
+
+
+
+  # %%
+  df.isna().sum()/len(df)*100
+
+  #laat zien dat er nu geen 1 rij NaN type heeft. 
+
+
+  # %%
+
+  #vertaalt de transaction date naar leesbaar data voor pandas dataframe.
+  df.head()
+
+
+  # %%
+  # Determine where the visualization will be rendered
+  # output_file('filename.html')  # Render to static HTML, or 
+  output_notebook()  # Render inline in a Jupyter Notebook
+
+  #selecteert de rijen transaction date en amount
+  # amount_data = df_sales["Amount (Merchant Currency)"]
+
+
+  #maakt cds bestanden voor sales per dag
+  # date_data_cds = ColumnDataSource(date_amount_data.groupby('Transaction Date')['Amount (Merchant Currency)'].sum().to_frame().reset_index(), data=dict(date=dates, close=AAPL['adj_close']))
+  df_grouped_sku_id = df.groupby(['Sku Id'])['Amount (Merchant Currency)'].sum().to_frame().reset_index()
+  df_grouped_sku_id.columns = ['sku_id', 'amount']
+  sku_id_volume_cds = ColumnDataSource(df_grouped_sku_id)
+  # amount_data_cds = ColumnDataSource(amount_data)
+  df_grouped_sku_id.head()
+
+  # %%
+  # Set up the figure(s)
+  # Create and configure the figure
+  from bokeh.models import HoverTool
+  #add hovertool
+  hover = HoverTool(tooltips = [ ('Sku ID','@sku_id'),('Total Sum of Sales', '@amount')])
+  labels = df_grouped_sku_id['sku_id'].tolist()
+  amount = df_grouped_sku_id['amount'].tolist()
+
+  fig = figure(plot_height=800, plot_width=1500, tools=['xpan', 'reset', 'save', 'wheel_zoom', hover],
+              title='Sales volume (EUR) per SKU ID in the second half of 2021', x_axis_type='auto',
+              x_axis_label='Sku ID', y_axis_label='Amount', x_range=labels)
+  # Connect to and draw the data
+  # Render the race as step lines
+  #maak vbar fig
+
+  fig.vbar(x='sku_id', top='amount', source=sku_id_volume_cds, width=0.5)
+  return(fig)
+
 
 sales = sales_volume()
 
@@ -701,4 +823,4 @@ sales = sales_volume()
 
 crashes = crashes()
 output_file('final.html')  # Render to static HTML, or 
-show(column(sales[0],sales[1],sales_volume_per_country(),ratings_per_country(),ratings(),crashes[0],crashes[1]))
+show(column(sales[0],sales[1],sku_id(), ratings(),crashes[0],crashes[1], sales_volume_per_country(),ratings_per_country()))
